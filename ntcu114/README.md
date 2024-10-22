@@ -24,3 +24,8 @@
 
 ## 10/22 新增 memory metric
 ![nodeUsagePanel](./nodeUsagePanel.png)
+
+重構了 user.go 那邊，原本是擷取 allocationAsk 來記錄在內部，修改為從 partition 的變數內取出須排程的 application，但 log 印出來時好像 release 的速度有點慢，從 log 上看的o話，分配數量與剩下數量對不上。
+
+另外還有新增一個「排程成功率」，紀錄每個預先規劃的 fakeAlloc 是否有被 YuniKorn 內部接受。 Grafana Panel 如下：
+![successfulRatio](./successfulRatio.png)
