@@ -21,3 +21,6 @@
 
 目前成果為：
 ![cpuUsagePanel](./cpuUsagePanel.png)
+
+## 10/22 新增 memory metric
+![nodeUsagePanel](./nodeUsagePanel.png)

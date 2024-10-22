@@ -16,6 +16,7 @@ type CustomMetrics struct {
     finalZeroSolutionRatio      prometheus.Gauge
     initialCandidateAvgScore    prometheus.Gauge
 	customCPUUsage				*prometheus.GaugeVec
+	customMemoryUsage			*prometheus.GaugeVec
 	lock                  locking.RWMutex
 }
 
@@ -71,6 +72,16 @@ func initCustomMetrics() *CustomMetrics {
         []string{"node_name"}, // 節點名稱作為標籤
     )
 
+	c.customMemoryUsage = prometheus.NewGaugeVec(
+        prometheus.GaugeOpts{
+            Namespace: Namespace,
+            Subsystem: CustomSubsystem,
+            Name:      "memory_usage_percent",
+            Help:      "Current memory usage percentage for each node",
+        },
+        []string{"node_name"}, // 節點名稱作為標籤
+    )
+
 	// Register the metrics
 	var metricsList = []prometheus.Collector{
 		c.decisionTimeDuration,
@@ -78,6 +89,7 @@ func initCustomMetrics() *CustomMetrics {
 		c.finalZeroSolutionRatio,
 		c.initialCandidateAvgScore,
 		c.customCPUUsage,
+		c.customMemoryUsage,
 	}
 	for _, metric := range metricsList {
 		if err := prometheus.Register(metric); err != nil {
@@ -120,4 +132,11 @@ func (c *CustomMetrics) SetCustomCPUUsage(name string, value float64) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 	c.customCPUUsage.With(prometheus.Labels{"node_name": name}).Set(value)
+}
+
+func (c *CustomMetrics) SetCustomMemoryUsage(name string, value float64) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.customMemoryUsage.With(prometheus.Labels{"node_name": name}).Set(value)
+
 }

@@ -28,7 +28,7 @@ func NewNodeData(ResourceTypes []string) *NodeData {
 
 func (nodeData *NodeData) UpdateLimits() {
 	nodeLimits := make([][]float64, 0)
-	systemLimit := make([]float64, 2)
+	totalLimit := make([]float64, 2)
 
 	for _, node := range nodeData.Nodes {
 		limits := make([]float64, 0)
@@ -39,13 +39,13 @@ func (nodeData *NodeData) UpdateLimits() {
 
 			limits = append(limits, resourceValue)
 
-			systemLimit[i] += resourceValue
+			totalLimit[i] += resourceValue
 		}
 		nodeLimits = append(nodeLimits, limits)
 	}
 
 	nodeData.ResourceLimits = nodeLimits
-	nodeData.TotalLimits = systemLimit
+	nodeData.TotalLimits = totalLimit
 }
 
 func (nodeData *NodeData) GetNodeLimits() [][]float64{
@@ -65,14 +65,7 @@ func (nodeData *NodeData) AddNode(n *objects.Node) {
 	nodeData.NodeIDs = append(nodeData.NodeIDs, n.NodeID)
 	nodeData.NodeCount += 1;
 	
-	availableLimit := make([]float64, nodeData.ResourceCount)	
-	resources := n.GetAvailableResource().Resources
-	for index, targetType := range nodeData.ResourceTypes {
-		availableLimit[index] += float64(resources[targetType])
-		nodeData.TotalLimits[index] += availableLimit[index]
-	}
-
-	nodeData.ResourceLimits = append(nodeData.ResourceLimits, availableLimit)
+	nodeData.UpdateLimits()
 }
 
 // make test easy 

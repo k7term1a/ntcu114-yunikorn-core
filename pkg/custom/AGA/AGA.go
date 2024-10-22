@@ -172,9 +172,10 @@ func (aga *AGA) GOAStart() []int{
 	return desision
 }
 
-func (aga *AGA) updateCPUUsage() {
+func (aga *AGA) metricUpdateNodeUsage() {
 	for id, limits := range aga.metadata.GetNodeLimits() {
 		metrics.GetCustomMetrics().SetCustomCPUUsage(fmt.Sprintf("node_%v", id), limits[0])
+		metrics.GetCustomMetrics().SetCustomMemoryUsage(fmt.Sprintf("node_%v", id), limits[1])
 	}
 
 }
@@ -192,7 +193,7 @@ func (aga *AGA) GetAllocations() (allocs []*objects.Allocation) {
 	nodes := aga.metadata.NodeData.NodeCount
 
 	aga.metadata.UpdateLimits()
-	aga.updateCPUUsage()
+	aga.metricUpdateNodeUsage()
 
 	if users * nodes == 0 {
 		return 
