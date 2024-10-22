@@ -1,4 +1,4 @@
-package AGA
+package custom
 
 // ACO hyperParameter
 const (

@@ -10,9 +10,9 @@ import (
 )
 
 func GetEffectScore(metadata *Metadata.Metadata, candidate *vector.Vector) float64 {
-	resources := metadata.NodeData.ResourceCount
-	nodes := metadata.NodeData.NodeCount
-	users := metadata.UserData.UserCount
+	resources := metadata.GetResourceCount()
+	nodes := metadata.GetNodeCount()
+	users := metadata.GetUserCount()
 	
 	userTotal := make([]float64, resources)
 
@@ -37,9 +37,9 @@ func GetEffectScore(metadata *Metadata.Metadata, candidate *vector.Vector) float
 		}
 	}
 
-	totalLimitsVector := vector.NewVector(metadata.GetTotalLimits())
+	totalLimitVector := vector.NewVector(metadata.GetTotalLimit())
 	userTotalVector := vector.NewVector(userTotal)
-	totalLimitsDistance := totalLimitsVector.Norm()
+	totalLimitsDistance := totalLimitVector.Norm()
 	userTotalDistance := userTotalVector.Norm()
 	
 	ratio := userTotalDistance / totalLimitsDistance
@@ -51,8 +51,8 @@ func GetEffectScore(metadata *Metadata.Metadata, candidate *vector.Vector) float
 }
 
 func GetFairnessScore(metadata *Metadata.Metadata, candidate *vector.Vector) float64 {
-	nodes := metadata.NodeData.NodeCount
-	users := metadata.UserData.UserCount
+	nodes := metadata.GetNodeCount()
+	users := metadata.GetUserCount()
 
 	usersDR := make([]float64, users)
 
@@ -97,7 +97,7 @@ func GetScore(metadata *Metadata.Metadata, candidate *vector.Vector) float64 {
 	score := effectScore / fairnessScore
 
 	scoreMin := 0.0
-	scoreMax := 100.0 * float64(metadata.UserData.UserCount)
+	scoreMax := 100.0 * float64(metadata.GetUserCount())
 
 	// 正規化 score 到 0 ~ 100
 	normalizedScore := (score - scoreMin) / (scoreMax - scoreMin) * 100

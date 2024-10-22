@@ -61,7 +61,7 @@ func (aco *ACO) SetHyperParameter(parameters *ACOHyperParameter) {
 	aco.HyperParameter = parameters
 }
 
-func (aco *ACO) SetMetadata(metadata *Metadata.Metadata) {
+func (aco *ACO) SetMetaData(metadata *Metadata.Metadata) {
 	aco.metadata = metadata
 }
 

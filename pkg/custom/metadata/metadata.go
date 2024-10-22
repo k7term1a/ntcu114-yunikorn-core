@@ -24,9 +24,6 @@ type Metadata struct {
 	GlobalDRs                	[]float64
 	GlobalDRRatioReciprocals 	[]float64
 
-	Nodes 				[]string
-	Requests 			[]*objects.AllocationAsk
-
 	*sync.RWMutex
 }
 
@@ -39,8 +36,38 @@ func NewMetadata() *Metadata {
 	}
 }
 
+func (metadata *Metadata) GetResourceCount() int{
+	return len(ResourceTypes)
+}
+
+//users
+func (metadata *Metadata) GetUserAskCount(index int) int{
+	return metadata.UserData.GetUserAskCount(index)
+}
+
+func (metadata *Metadata) GetLastRequesti(index int) *objects.AllocationAsk {
+	return metadata.UserData.GetLastRequest(index)
+}
+
+func (metadata *Metadata) GetUserCount() int {
+	return metadata.UserData.GetUserCount()
+}
+
 func (metadata *Metadata) GetUserAsks() [][]float64 {
 	return metadata.UserData.GetUserAsks()
+}
+
+func (metadata *Metadata) UpdateUserInfo(app []*objects.Application) {
+	metadata.UserData.UpdateUserInfo(app)
+}
+
+// node
+func (metadata *Metadata) GetNodeCount() int {
+	return metadata.NodeData.GetNodeCount()
+}
+
+func (metadata *Metadata) GetNodeId(index int) string{
+	return metadata.NodeData.GetNodeId(index)
 }
 
 func (metadata *Metadata) UpdateLimits() {
@@ -50,30 +77,19 @@ func (metadata *Metadata) GetNodeLimits() [][]float64 {
 	return metadata.NodeData.GetNodeLimits()
 }
 
-func (metadata *Metadata) GetTotalLimits() []float64 {
-	return metadata.NodeData.GetTotalLimits()
-}
-
-func (metadata *Metadata) AddUser(ask *objects.AllocationAsk){ 
-	metadata.Requests = append(metadata.Requests, ask)
-	metadata.UserData.AddUser(ask)
-}
-
-func (metadata *Metadata) RemoveUser(index int) {
-	metadata.Requests = append(metadata.Requests[:index], metadata.Requests[index + 1:]...)
-	metadata.UserData.RemoveUser(index)
+func (metadata *Metadata) GetTotalLimit() []float64 {
+	return metadata.NodeData.GetTotalLimit()
 }
 
 func (metadata *Metadata) AddNode(node *objects.Node) {
 	metadata.NodeData.AddNode(node)
-	metadata.Nodes = metadata.NodeData.NodeIDs
 }
 
 func (metadata *Metadata) CalculateDRs() {
 	metadata.DRs = make([][]float64, 0)
 	metadata.DRRatioReciprocals = make([][]float64, 0)
 
-	for _, limit := range metadata.NodeData.ResourceLimits {
+	for _, limit := range metadata.GetNodeLimits() {
 		DR := make([]float64, 0)
 		DRRatioReciprocal := make([]float64, 0)
 
@@ -81,7 +97,7 @@ func (metadata *Metadata) CalculateDRs() {
 		for _, askResources := range userAsks {
 			maxRatio := 0.0
 
-			for i := 0; i < int(metadata.NodeData.ResourceCount); i++ {
+			for i := 0; i < len(ResourceTypes); i++ {
 				ratio := askResources[i] / limit[i]
 				if ratio > maxRatio {
 					maxRatio = ratio
@@ -98,14 +114,14 @@ func (metadata *Metadata) CalculateDRs() {
 }
 
 func (metadata *Metadata) CalculateGlobalDRs() {
-	metadata.GlobalDRs = make([]float64, metadata.UserData.UserCount)
-	metadata.GlobalDRRatioReciprocals = make([]float64, metadata.UserData.UserCount)
+	metadata.GlobalDRs = make([]float64, metadata.UserData.GetUserCount())
+	metadata.GlobalDRRatioReciprocals = make([]float64, metadata.UserData.GetUserCount())
 
-	totalLimits := metadata.GetTotalLimits()
+	totalLimit := metadata.GetTotalLimit()
 	userAsks := metadata.UserData.GetUserAsks()
 	for userIndex, askResources := range userAsks {
 		maxRatio := 0.0
-		for resourceIndex, limit := range totalLimits {
+		for resourceIndex, limit := range totalLimit {
 			ratio := askResources[resourceIndex] / limit
 			if ratio > maxRatio {
 				maxRatio = ratio

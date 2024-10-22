@@ -33,7 +33,6 @@ import (
 	"github.com/apache/yunikorn-core/pkg/common/configs"
 	"github.com/apache/yunikorn-core/pkg/common/resources"
 	"github.com/apache/yunikorn-core/pkg/common/security"
-	"github.com/apache/yunikorn-core/pkg/custom/AGA"
 	"github.com/apache/yunikorn-core/pkg/locking"
 	"github.com/apache/yunikorn-core/pkg/log"
 	"github.com/apache/yunikorn-core/pkg/metrics"
@@ -43,6 +42,8 @@ import (
 	"github.com/apache/yunikorn-core/pkg/scheduler/ugm"
 	"github.com/apache/yunikorn-core/pkg/webservice/dao"
 	"github.com/apache/yunikorn-scheduler-interface/lib/go/si"
+
+	customAlgo "github.com/apache/yunikorn-core/pkg/custom"
 )
 
 type PartitionContext struct {
@@ -551,7 +552,7 @@ func (pc *PartitionContext) AddNode(node *objects.Node, existingAllocations []*o
 		return err
 	}
 
-	AGA.GetAGA().AddNode(node)
+	customAlgo.AddNode(node)
 
 	// Add allocations that exist on the node when added
 	if len(existingAllocations) > 0 {
@@ -1442,7 +1443,6 @@ func (pc *PartitionContext) addAllocationAsk(siAsk *si.AllocationAsk) error {
 	if er := app.AddAllocationAsk(ask); er != nil {
 		return er
 	}
-	AGA.GetAGA().AddUser(ask)
 	return nil 
 }
 

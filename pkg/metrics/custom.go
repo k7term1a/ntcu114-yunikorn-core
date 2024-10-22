@@ -17,6 +17,7 @@ type CustomMetrics struct {
     initialCandidateAvgScore    prometheus.Gauge
 	customCPUUsage				*prometheus.GaugeVec
 	customMemoryUsage			*prometheus.GaugeVec
+	successfulRatio				prometheus.Gauge
 	lock                  locking.RWMutex
 }
 
@@ -82,6 +83,16 @@ func initCustomMetrics() *CustomMetrics {
         []string{"node_name"}, // 節點名稱作為標籤
     )
 
+	// Final zero solution ratio
+	c.successfulRatio = prometheus.NewGauge(
+		prometheus.GaugeOpts{
+			Namespace: Namespace,
+			Subsystem: CustomSubsystem,
+			Name:      "successful_ratio",
+			Help:      "The ratio of final decision solutions that are all zeros in the metaheuristic algorithm",
+		})
+
+
 	// Register the metrics
 	var metricsList = []prometheus.Collector{
 		c.decisionTimeDuration,
@@ -90,6 +101,7 @@ func initCustomMetrics() *CustomMetrics {
 		c.initialCandidateAvgScore,
 		c.customCPUUsage,
 		c.customMemoryUsage,
+		c.successfulRatio,
 	}
 	for _, metric := range metricsList {
 		if err := prometheus.Register(metric); err != nil {
@@ -139,4 +151,10 @@ func (c *CustomMetrics) SetCustomMemoryUsage(name string, value float64) {
 	defer c.lock.Unlock()
 	c.customMemoryUsage.With(prometheus.Labels{"node_name": name}).Set(value)
 
+}
+
+func (c *CustomMetrics) SetSuccessfulRatio(value float64) {
+	c.lock.Lock()
+	defer c.lock.Unlock()
+	c.successfulRatio.Set(value)
 }

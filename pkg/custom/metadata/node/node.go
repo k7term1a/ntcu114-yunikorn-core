@@ -5,36 +5,43 @@ import (
 )
 
 type NodeData struct {
-	NodeCount      int
-	NodeIDs        []string
-	Nodes 		   []*objects.Node
-	ResourceCount  int
-	ResourceTypes  []string
-	ResourceLimits [][]float64
-	TotalLimits    []float64
+	nodeIDs        	[]string
+	nodeRefs 		[]*objects.Node
+	nodeCount      	int
+
+	resourceCount  	int
+	resourceTypes  	[]string
+
+	nodeLimits 		[][]float64
+	totalLimit    	[]float64
 }
 
-func NewNodeData(ResourceTypes []string) *NodeData {
-	ResourceCount := len(ResourceTypes)
+func NewNodeData(resourceTypes []string) *NodeData {
 	return &NodeData{
-		NodeCount: 0,
-		NodeIDs: make([]string, 0),
-		ResourceCount: len(ResourceTypes),
-		ResourceTypes:   ResourceTypes,
-		ResourceLimits: make([][]float64, 0),
-		TotalLimits:    make([]float64, ResourceCount),
+		nodeIDs: 		make([]string, 0),
+		nodeRefs:		make([]*objects.Node, 0),
+		nodeCount: 		0,
+
+		resourceCount:	len(resourceTypes),
+		resourceTypes:	resourceTypes,
+
+		nodeLimits:		make([][]float64, 0),
+		totalLimit:		make([]float64, len(resourceTypes)),
 	}
 }
 
+func (nodeData *NodeData) GetNodeId(index int) string{
+	return nodeData.nodeIDs[index]
+}
 func (nodeData *NodeData) UpdateLimits() {
 	nodeLimits := make([][]float64, 0)
-	totalLimit := make([]float64, 2)
+	totalLimit := make([]float64, nodeData.resourceCount)
 
-	for _, node := range nodeData.Nodes {
+	for _, node := range nodeData.nodeRefs {
 		limits := make([]float64, 0)
 		nodeAvaiResources := *node.GetAvailableResource()
 
-		for i, resourceType := range nodeData.ResourceTypes {
+		for i, resourceType := range nodeData.resourceTypes {
 			resourceValue := float64(nodeAvaiResources.Resources[resourceType])
 
 			limits = append(limits, resourceValue)
@@ -44,16 +51,20 @@ func (nodeData *NodeData) UpdateLimits() {
 		nodeLimits = append(nodeLimits, limits)
 	}
 
-	nodeData.ResourceLimits = nodeLimits
-	nodeData.TotalLimits = totalLimit
+	nodeData.nodeLimits = nodeLimits
+	nodeData.totalLimit = totalLimit
+}
+
+func (nodeData *NodeData) GetNodeCount() int {
+	return nodeData.nodeCount
 }
 
 func (nodeData *NodeData) GetNodeLimits() [][]float64{
-	return nodeData.ResourceLimits
+	return nodeData.nodeLimits
 }
 
-func (nodeData *NodeData) GetTotalLimits() []float64{
-	return nodeData.TotalLimits
+func (nodeData *NodeData) GetTotalLimit() []float64{
+	return nodeData.totalLimit
 }
 
 // Parse the vcore and memory in node
@@ -61,22 +72,10 @@ func (nodeData *NodeData) AddNode(n *objects.Node) {
 	if n.NodeID == "yk0" {
 		return 
 	}
-	nodeData.Nodes = append(nodeData.Nodes, n)
-	nodeData.NodeIDs = append(nodeData.NodeIDs, n.NodeID)
-	nodeData.NodeCount += 1;
+
+	nodeData.nodeIDs 	= append(nodeData.nodeIDs, n.NodeID)
+	nodeData.nodeRefs	= append(nodeData.nodeRefs, n)
+	nodeData.nodeCount	= len(nodeData.nodeRefs);
 	
 	nodeData.UpdateLimits()
-}
-
-// make test easy 
-func (nodeData *NodeData) AddNodeDirectly(nodeName string, resource []float64) {
-	nodeData.NodeCount += 1
-	
-	availableLimit := make([]float64, 2)
-	for index := 0; index < len(resource); index++ {
-		availableLimit[index] += resource[index]
-		nodeData.TotalLimits[index] += availableLimit[index]
-	}
-
-	nodeData.ResourceLimits = append(nodeData.ResourceLimits, availableLimit)
 }

@@ -39,7 +39,7 @@ import (
 	siCommon "github.com/apache/yunikorn-scheduler-interface/lib/go/common"
 	"github.com/apache/yunikorn-scheduler-interface/lib/go/si"
 
-	"github.com/apache/yunikorn-core/pkg/custom/AGA"
+	customAlgo "github.com/apache/yunikorn-core/pkg/custom"
 )
 
 const disableReservation = "DISABLE_RESERVATION"
@@ -168,23 +168,32 @@ func (cc *ClusterContext) customSchedule() bool {
 		}
 
 		schedulingStart := time.Now()
-		metrics.GetCustomMetrics().SetDecisionTimeDuration(AGA.GetLastDuration())
+		metrics.GetCustomMetrics().SetDecisionTimeDuration(customAlgo.GetLastDuration())
 
-		preAllocs := AGA.GetAGA().GetAllocations()
-		
-		if len(preAllocs) != 0 {
-			log.Log(log.Custom).Info("schedule finish")
-		} else {
-			metrics.GetCustomMetrics().SetFinalDecisionScore(0)
-			metrics.GetCustomMetrics().SetInitialCandidateAvgScore(0)
+		allApps := psc.GetApplications()
+		pendingApps := make([]*objects.Application, 0)
+
+		for _, app := range allApps {
+			log.Log(log.Custom).Info(fmt.Sprintf("length is %v", len(app.GetAllRequests())))
+			if len(app.GetAllRequests()) != 0 {
+				pendingApps = append(pendingApps, app)
+			}
 		}
 
+		preAllocs := customAlgo.GetAllocations(pendingApps, 0)
+		
+
+		totalAllocCount 		:= 0
+		successfulAllocCount	:= 0
 		for _, alloc := range preAllocs {
+			totalAllocCount += 1;
 			appOfAlloc := psc.getApplication(alloc.GetApplicationID())
 			selectNode := psc.GetNode(alloc.GetNodeID())
 
 			realAlloc := psc.tryCustomAllocate(appOfAlloc, selectNode)
 			if realAlloc != nil {
+				successfulAllocCount += 1
+
 				metrics.GetSchedulerMetrics().ObserveSchedulingLatency(schedulingStart)
 				if realAlloc.GetResult() == objects.Replaced {
 					// communicate the removal to the RM
@@ -195,6 +204,15 @@ func (cc *ClusterContext) customSchedule() bool {
 				activity = true
 			}
 		}
+
+		if len(preAllocs) != 0 {
+			log.Log(log.Custom).Info("schedule finish")
+			metrics.GetCustomMetrics().SetSuccessfulRatio(100.0 * (float64(successfulAllocCount) / float64(totalAllocCount)))
+		} else {
+			metrics.GetCustomMetrics().SetFinalDecisionScore(0)
+			metrics.GetCustomMetrics().SetInitialCandidateAvgScore(0)
+		}
+		
 	}
 	return activity
 }

@@ -1,20 +1,14 @@
 package GOA
 
 import (
-	"fmt"
 	"math"
-	"math/rand"
 	"sync"
-	"time"
 
 	goamath "github.com/apache/yunikorn-core/pkg/custom/GOA/math"
 	agamath "github.com/apache/yunikorn-core/pkg/custom/math"
 	"github.com/apache/yunikorn-core/pkg/custom/math/vector"
 	Metadata "github.com/apache/yunikorn-core/pkg/custom/metadata"
 	"github.com/apache/yunikorn-core/pkg/metrics"
-
-	"github.com/apache/yunikorn-core/pkg/log"
-	"github.com/apache/yunikorn-core/pkg/scheduler/objects"
 )
 
 
@@ -22,7 +16,7 @@ type GOAHyperParameter struct {
 	iterations        int
 	cMax              float64
 	cMin              float64
-	grasshopperAmount int
+	GrasshopperAmount int
 	GForce            float64
 	WindForce         float64
 }
@@ -32,7 +26,7 @@ func NewGOAHyperParameter(iterations int, cMax float64, cMin float64, grasshoppe
 		iterations:        iterations,
 		cMax:              cMax,
 		cMin:              cMin,
-		grasshopperAmount: grasshopperAmount,
+		GrasshopperAmount: grasshopperAmount,
 		GForce:            GForce,
 		WindForce:         WindForce,
 	}
@@ -52,7 +46,7 @@ type GOA struct {
 
 func (goa *GOA) SetHyperParameter(hyperParameter *GOAHyperParameter) {
 	goa.hyperParameter = hyperParameter
-	goa.grasshoppers =  make([]*vector.Vector, goa.hyperParameter.grasshopperAmount)
+	goa.grasshoppers =  make([]*vector.Vector, goa.hyperParameter.GrasshopperAmount)
 }
 
 func(goa *GOA) SetMetaData(metaData *Metadata.Metadata){
@@ -85,7 +79,7 @@ func (goa *GOA) getWindUnitVector(grasshopper *vector.Vector, best_grasshopper *
 func (goa *GOA) greedyMove(minValue float64, nextPositions *[]*vector.Vector) {
 	// goa.bestGrasshopper = nil
 
-	for i := 0; i < goa.hyperParameter.grasshopperAmount; i++ {
+	for i := 0; i < goa.hyperParameter.GrasshopperAmount; i++ {
 		nextPosition := (*nextPositions)[i]
 
 		oldValue := agamath.GetScore(goa.metadata, goa.grasshoppers[i])
@@ -119,25 +113,16 @@ func (goa *GOA) calculateDomainResources() {
 		fairness_array = append(fairness_array, value...)
 	}
 	goa.fairness_vector = vector.NewVector(fairness_array)
-	// log.Log(log.Custom).Info(fmt.Sprintf("fairness_vector is %v", goa.fairness_vector))
-	
 }
 
 
 func (goa *GOA) Start(candidates []*vector.Vector) (decision []int) {
-	users := goa.metadata.UserData.UserCount
-	nodes := goa.metadata.NodeData.NodeCount
-
-	// log.Log(log.Custom).Info(fmt.Sprintf("now : %v, %v", users, nodes))
+	users := goa.metadata.GetUserCount()
+	nodes := goa.metadata.GetNodeCount()
 
 	if users*nodes == 0 {
 		return nil
 	}
-
-	// log.Log(log.Custom).Info(fmt.Sprintf("goa start : %v, %v", users, nodes))
-	// log.Log(log.Custom).Info(fmt.Sprintf("metadata is %v", goa.metaData))
-	// log.Log(log.Custom).Info(fmt.Sprintf("nodedata is %v", goa.metaData.NodeData))
-	// log.Log(log.Custom).Info(fmt.Sprintf("userdata is %v", goa.metaData.UserData))
 
 	goa.calculateDomainResources()
 
@@ -156,23 +141,20 @@ func (goa *GOA) Start(candidates []*vector.Vector) (decision []int) {
 		}
 	}
 
-	avgScore := scoreSum / float64(goa.hyperParameter.grasshopperAmount)
+	avgScore := scoreSum / float64(goa.hyperParameter.GrasshopperAmount)
 	if avgScore == math.Inf(1) {
 		avgScore = -1
 	}
 
 	metrics.GetCustomMetrics().SetInitialCandidateAvgScore(avgScore)
 
-	// log.Log(log.Custom).Info(fmt.Sprintf("grasshoppers: %v", goa.grasshoppers))
-	// log.Log(log.Custom).Info(fmt.Sprintf("best grasshopper: %v", goa.bestGrasshopper))
-
 	// main program
 	for i := 0; i < goa.hyperParameter.iterations; i++ {
 		c := goa.hyperParameter.cMax - float64(i)*((goa.hyperParameter.cMax-goa.hyperParameter.cMin)/float64(goa.hyperParameter.iterations))
 		nextPositions := make([]*vector.Vector, 0)
-		for grasshopper_i := 0; grasshopper_i < goa.hyperParameter.grasshopperAmount; grasshopper_i++ {
+		for grasshopper_i := 0; grasshopper_i < goa.hyperParameter.GrasshopperAmount; grasshopper_i++ {
 			moveVector := vector.WithSize(users * nodes)
-			for grasshopper_j := 0; grasshopper_j < goa.hyperParameter.grasshopperAmount; grasshopper_j++ {
+			for grasshopper_j := 0; grasshopper_j < goa.hyperParameter.GrasshopperAmount; grasshopper_j++ {
 				if grasshopper_i == grasshopper_j {
 					continue
 				}
@@ -190,81 +172,8 @@ func (goa *GOA) Start(candidates []*vector.Vector) (decision []int) {
 			nextPositions = append(nextPositions, vector.Add(goa.grasshoppers[grasshopper_i], moveVector))
 		}
 		goa.greedyMove(math.Inf(1), &nextPositions)
-
-		// log.Log(log.Custom).Info(fmt.Sprintf("grasshoppers: %v", goa.grasshoppers))
-		// log.Log(log.Custom).Info(fmt.Sprintf("best grasshopper: %v", goa.bestGrasshopper))
 	}
-
-	// log.Log(log.Custom).Info(fmt.Sprintf("Best solution: %v", goa.bestGrasshopper))
 
 	decision = goa.bestGrasshopper.ToIntArray()
-	log.Log(log.Custom).Info(fmt.Sprintf("decision: %v", decision))
 	return
-}
-
-func (goa *GOA) GetAllocations() (allocs []*objects.Allocation) {
-	goa.Lock()
-	defer goa.Unlock()
-	allocs = make([]*objects.Allocation, 0)
-
-	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	users := goa.metadata.UserData.UserCount
-	nodes := goa.metadata.NodeData.NodeCount
-
-	if users*nodes == 0 {
-		return nil
-	}
-
-	for i := 0; i < goa.hyperParameter.grasshopperAmount; i++ {
-		grasshopperArray := make([]int, users*nodes)
-		for j := 0; j < len(grasshopperArray); j++ {
-			grasshopperArray[j] = int(r.Int63n(6))
-		}
-		grasshopper := vector.NewVectorByInt(grasshopperArray)
-		goa.grasshoppers = append(goa.grasshoppers, grasshopper)
-	}
-
-
-	candidates := make([]*vector.Vector, 0)
-
-	for i := 0; i <  goa.hyperParameter.grasshopperAmount; i++ {
-		candidateArray := make([]int, users*nodes)
-		for j := 0; j < len(candidateArray); j++ {
-			candidateArray[j] = int(r.Int63n(6))
-		}
-		candidate := vector.NewVectorByInt(candidateArray)
-		candidates = append(candidates, candidate)
-
-	}
-
-	decision := goa.Start(candidates)
-
-	removeIndexs := make([]int, 0)
-	visited := make([]int, users)
-	for i := 0; i < users; i++ {
-		visited[i] = 0
-	}
-
-	for nodeIndex := 0; nodeIndex < len(goa.metadata.Nodes); nodeIndex++ {
-		for userIndex := 0; userIndex < len(goa.metadata.Requests); userIndex++ {
-			if distributeAmount := decision[nodeIndex*users+userIndex]; distributeAmount != 0 {
-				nodeId := goa.metadata.Nodes[nodeIndex]
-				ask := goa.metadata.Requests[userIndex]
-				alloc := objects.NewAllocation(nodeId, ask)
-				allocs = append(allocs, alloc)
-				if visited[userIndex] == 0 {
-					removeIndexs = append([]int{userIndex}, removeIndexs...)
-					visited[userIndex] = 1
-				}
-
-			}
-
-		}
-	}
-
-	for _, index := range removeIndexs {
-		goa.RemoveUser(index)
-	}
-	return allocs
 }
