@@ -171,20 +171,16 @@ func (cc *ClusterContext) customSchedule() bool {
 		metrics.GetCustomMetrics().SetDecisionTimeDuration(customAlgo.GetLastDuration())
 
 		allApps := psc.GetApplications()
-		pendingApps := make([]*objects.Application, 0)
+		pendingApps := customAlgo.GetPendingApps(allApps)
 
-		for _, app := range allApps {
-			log.Log(log.Custom).Info(fmt.Sprintf("length is %v", len(app.GetAllRequests())))
-			if len(app.GetAllRequests()) != 0 {
-				pendingApps = append(pendingApps, app)
-			}
+		if len(pendingApps) == 0 {
+			continue
 		}
 
 		preAllocs := customAlgo.GetAllocations(pendingApps, 0)
-		
-
 		totalAllocCount 		:= 0
 		successfulAllocCount	:= 0
+
 		for _, alloc := range preAllocs {
 			totalAllocCount += 1;
 			appOfAlloc := psc.getApplication(alloc.GetApplicationID())

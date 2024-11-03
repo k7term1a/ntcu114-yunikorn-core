@@ -50,8 +50,13 @@ func (userData *UserData) UpdateUserInfo(apps []*objects.Application) {
 			continue
 		}
 
+		pendingAsks := 0
+		for _, request := range requests {
+			pendingAsks += int(request.GetPendingAskRepeat())
+		}
+
 		askData := &AskData{
-			askCount: 	len(requests),
+			askCount: 	pendingAsks,
 			userAsks:	userData.praseAskResources(requests[0]),
 			requests:	requests,
 		}

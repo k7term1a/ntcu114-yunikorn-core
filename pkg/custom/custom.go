@@ -40,10 +40,28 @@ func Init() {
 	goa = GOA.NewGOA()
 
 	metadata = Metadata.NewMetadata()
+
+	log.Log(log.Custom).Info("custom algorithm start")
 }
 
 func AddNode(n *objects.Node) {
 	metadata.AddNode(n)
+}
+
+func GetPendingApps(apps []*objects.Application) (pendingApps []*objects.Application){
+	pendingApps = make([]*objects.Application, 0)
+	for _, app := range apps {
+		requests := app.GetAllRequests()
+		pendingCount := 0
+		for _, request := range requests {
+			pendingCount += int(request.GetPendingAskRepeat())
+		}
+		log.Log(log.Custom).Info(fmt.Sprintf("count is %v", pendingCount))
+		if pendingCount != 0 {
+			pendingApps = append(pendingApps, app)
+		}
+	}
+	return 
 }
 
 func randanInitValue(amount int) []*vector.Vector{
