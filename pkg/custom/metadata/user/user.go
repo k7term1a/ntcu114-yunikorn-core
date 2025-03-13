@@ -87,6 +87,11 @@ func (userData *UserData) GetUserAsks() [][]float64{
 	return asks
 }
 
+func (userData *UserData) GetUserAsk(index int) []float64 {
+	userName := userData.userNames[index]
+	return userData.userAskMap[userName].userAsks
+}
+
 func (userData *UserData) GetUserAskCount(index int) int{
 	userName := userData.userNames[index]
 	return userData.userAskMap[userName].askCount

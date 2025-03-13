@@ -1,6 +1,7 @@
 package NodeData
 
 import (
+    "sort"
 	"github.com/apache/yunikorn-core/pkg/scheduler/objects"
 )
 
@@ -74,6 +75,7 @@ func (nodeData *NodeData) AddNode(n *objects.Node) {
 	}
 
 	nodeData.nodeIDs 	= append(nodeData.nodeIDs, n.NodeID)
+	sort.Strings(nodeData.nodeIDs)
 	nodeData.nodeRefs	= append(nodeData.nodeRefs, n)
 	nodeData.nodeCount	= len(nodeData.nodeRefs);
 	

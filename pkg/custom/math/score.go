@@ -50,6 +50,40 @@ func GetEffectScore(metadata *Metadata.Metadata, candidate *vector.Vector) float
 	return percentage
 }
 
+func GetBalanceScore(metadata *Metadata.Metadata, candidate *vector.Vector) float64 {
+	nodes := metadata.GetNodeCount()
+	users := metadata.GetUserCount()
+
+	occupied := make([]float64, nodes)
+
+	for i := 0; i < nodes; i++ {
+		occupiedAtNodeI := make([]float64, metadata.GetResourceCount())
+		for j := 0; j < users; j++{
+			amountThatUserJTakeAtNodeI := candidate.Get(i*users+j)
+			if amountThatUserJTakeAtNodeI < 0 {
+				return math.Inf(1)
+			}
+			cpuOccupy := amountThatUserJTakeAtNodeI * metadata.UserData.GetUserAsk(j)[0]
+			occupiedAtNodeI[0] += cpuOccupy
+			memOccupy := amountThatUserJTakeAtNodeI * metadata.UserData.GetUserAsk(j)[1]
+			occupiedAtNodeI[1] += memOccupy
+		}
+
+		limitOfNodeI := metadata.GetNodeLimits()[i]
+		for resource := 0; resource < metadata.GetResourceCount(); resource++ {
+			if occupiedAtNodeI[resource] > limitOfNodeI[resource]{
+				return math.Inf(1)
+			}else {
+				occupied[i] = math.Max(occupied[i], float64(occupiedAtNodeI[resource] / limitOfNodeI[resource]))
+			}
+		}
+	}
+	jainIndexValue := math.Pow(Sum(occupied), 2) / SumOfSquares(occupied) * float64(nodes)
+
+	return jainIndexValue
+	
+}
+
 func GetFairnessScore(metadata *Metadata.Metadata, candidate *vector.Vector) float64 {
 	nodes := metadata.GetNodeCount()
 	users := metadata.GetUserCount()
@@ -81,6 +115,10 @@ func GetScore(metadata *Metadata.Metadata, candidate *vector.Vector) float64 {
 	}
 	fairnessScore := GetFairnessScore(metadata, candidate)
 	if fairnessScore == math.Inf(1) {
+		return math.Inf(1)
+	}
+	balanceScore := GetBalanceScore(metadata, candidate)
+	if balanceScore == math.Inf(1) {
 		return math.Inf(1)
 	}
 

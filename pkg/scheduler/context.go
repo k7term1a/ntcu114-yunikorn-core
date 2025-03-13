@@ -177,12 +177,12 @@ func (cc *ClusterContext) customSchedule() bool {
 			continue
 		}
 
-		preAllocs := customAlgo.GetAllocations(pendingApps, 0)
-		totalAllocCount 		:= 0
-		successfulAllocCount	:= 0
+		preAllocs := customAlgo.GetAllocations(pendingApps, customAlgo.AGAMethod)
+		totalAllocCount := 0
+		successfulAllocCount := 0
 
 		for _, alloc := range preAllocs {
-			totalAllocCount += 1;
+			totalAllocCount += 1
 			appOfAlloc := psc.getApplication(alloc.GetApplicationID())
 			selectNode := psc.GetNode(alloc.GetNodeID())
 
@@ -208,7 +208,7 @@ func (cc *ClusterContext) customSchedule() bool {
 			metrics.GetCustomMetrics().SetFinalDecisionScore(0)
 			metrics.GetCustomMetrics().SetInitialCandidateAvgScore(0)
 		}
-		
+
 	}
 	return activity
 }

@@ -131,19 +131,26 @@ func (goa *GOA) Start(candidates []*vector.Vector) (decision []int) {
 	goa.bestGrasshopper = vector.WithSize(users * nodes)
 
 	scoreSum := 0.0
+	scoreCount := 0
 
 	for _, candidate := range(candidates) {
 		value := agamath.GetScore(goa.metadata, candidate)
-		scoreSum += value
+		if value != math.Inf(1) {
+			scoreSum += value
+			scoreCount += 1
+		}
 		if minValue > value {
 			minValue = value
 			goa.bestGrasshopper = candidate
 		}
 	}
 
-	avgScore := scoreSum / float64(goa.hyperParameter.GrasshopperAmount)
-	if avgScore == math.Inf(1) {
+	avgScore := 0.0
+
+	if minValue == math.Inf(1) {
 		avgScore = -1
+	} else {
+		avgScore = scoreSum / float64(scoreCount)
 	}
 
 	metrics.GetCustomMetrics().SetInitialCandidateAvgScore(avgScore)
